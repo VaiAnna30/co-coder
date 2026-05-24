@@ -25,7 +25,7 @@ app.use(express.json({ limit: '5mb' })); // generous limit for code + whiteboard
 app.use(express.urlencoded({ extended: true }));
 
 // Health-check endpoint
-app.get('/', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({
     service: 'CoCode API',
     status: 'running',
