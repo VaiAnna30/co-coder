@@ -5,7 +5,7 @@ const path = require('path');
 const os = require('os');
 const router = express.Router();
 
-const EXECUTION_TIMEOUT = 5000; // 5 seconds max
+const EXECUTION_TIMEOUT = 20000; // 20 seconds max for free tier compilation
 
 // Helper to run a command with timeout and stdin
 const runCommand = (cmd, args, stdinData = '', cwd = null) => {
@@ -42,7 +42,7 @@ const runCommand = (cmd, args, stdinData = '', cwd = null) => {
     // Kill process if it exceeds timeout
     const timeoutId = setTimeout(() => {
       proc.kill();
-      reject({ message: 'Execution timed out (5s limit)' });
+      reject({ message: 'Execution timed out (20s limit)' });
     }, EXECUTION_TIMEOUT);
   });
 };
