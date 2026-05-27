@@ -3,22 +3,14 @@ import Editor from '@monaco-editor/react';
 
 const LANGUAGES = [
   { value: 'javascript', label: 'JavaScript' },
-  { value: 'typescript', label: 'TypeScript' },
   { value: 'python', label: 'Python' },
   { value: 'java', label: 'Java' },
   { value: 'cpp', label: 'C++' },
   { value: 'c', label: 'C' },
-  { value: 'csharp', label: 'C#' },
-  { value: 'go', label: 'Go' },
-  { value: 'rust', label: 'Rust' },
-  { value: 'ruby', label: 'Ruby' },
-  { value: 'php', label: 'PHP' },
-  { value: 'html', label: 'HTML' },
-  { value: 'css', label: 'CSS' },
-  { value: 'json', label: 'JSON' },
-  { value: 'markdown', label: 'Markdown' },
-  { value: 'sql', label: 'SQL' },
+  { value: 'plaintext', label: 'Plain Text' },
 ];
+
+import ExecutionPanel from './ExecutionPanel';
 
 export default function CodeEditor({ roomCode, socket, language: initialLang }) {
   const [language, setLanguage] = useState(initialLang || 'javascript');
@@ -91,7 +83,7 @@ export default function CodeEditor({ roomCode, socket, language: initialLang }) 
   };
 
   return (
-    <div className="editor-container">
+    <div className="editor-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="editor-toolbar">
         <div className="editor-toolbar-left">
           <select className="language-select" value={language} onChange={handleLanguageChange}>
@@ -129,35 +121,39 @@ export default function CodeEditor({ roomCode, socket, language: initialLang }) 
         </div>
       </div>
 
-      <Editor
-        height="100%"
-        language={language}
-        value={code}
-        onChange={handleEditorChange}
-        onMount={handleEditorMount}
-        theme="vs-dark"
-        options={{
-          fontSize: 14,
-          fontFamily: "'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace",
-          fontLigatures: true,
-          minimap: { enabled: true, scale: 1 },
-          scrollBeyondLastLine: false,
-          smoothScrolling: true,
-          cursorBlinking: 'smooth',
-          cursorSmoothCaretAnimation: 'on',
-          padding: { top: 16 },
-          renderLineHighlight: 'all',
-          bracketPairColorization: { enabled: true },
-          automaticLayout: true,
-          wordWrap: 'on',
-          tabSize: 2,
-        }}
-        loading={
-          <div className="flex-center" style={{ height: '100%', background: 'var(--bg-primary)' }}>
-            <div className="spinner" />
-          </div>
-        }
-      />
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <Editor
+          height="100%"
+          language={language}
+          value={code}
+          onChange={handleEditorChange}
+          onMount={handleEditorMount}
+          theme="vs-dark"
+          options={{
+            fontSize: 14,
+            fontFamily: "'Fira Code', 'JetBrains Mono', 'Cascadia Code', monospace",
+            fontLigatures: true,
+            minimap: { enabled: true, scale: 1 },
+            scrollBeyondLastLine: false,
+            smoothScrolling: true,
+            cursorBlinking: 'smooth',
+            cursorSmoothCaretAnimation: 'on',
+            padding: { top: 16 },
+            renderLineHighlight: 'all',
+            bracketPairColorization: { enabled: true },
+            automaticLayout: true,
+            wordWrap: 'on',
+            tabSize: 2,
+          }}
+          loading={
+            <div className="flex-center" style={{ height: '100%', background: 'var(--bg-primary)' }}>
+              <div className="spinner" />
+            </div>
+          }
+        />
+      </div>
+
+      <ExecutionPanel code={code} language={language} />
     </div>
   );
 }
