@@ -15,6 +15,7 @@ const initSocket = require('./socket/index');
 // Route modules
 const authRoutes = require('./routes/auth');
 const roomRoutes = require('./routes/rooms');
+const codeRoutes = require('./routes/code');
 
 // ─── Express App Setup ─────────────────────────────────────────────────────────
 const app = express();
@@ -36,6 +37,7 @@ app.get('/api/health', (req, res) => {
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/rooms', roomRoutes);
+app.use('/api/code', codeRoutes);
 
 const path = require('path');
 
