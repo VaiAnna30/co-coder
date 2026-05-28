@@ -984,11 +984,6 @@ select.input {
   align-items: center;
 }
 
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
 .participant-avatar {
   width: 24px;
   height: 24px;
