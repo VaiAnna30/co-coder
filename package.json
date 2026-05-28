@@ -1,0 +1,12 @@
+{
+  "name": "cocode",
+  "version": "1.0.0",
+  "description": "CoCode Collaborative IDE",
+  "scripts": {
+    "build": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
+    "start": "npm start --prefix server"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

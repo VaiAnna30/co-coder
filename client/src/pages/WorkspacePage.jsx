@@ -23,6 +23,9 @@ export default function WorkspacePage() {
   const [roomData, setRoomData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [unreadChat, setUnreadChat] = useState(false);
+  
+  // Real-time admin admissions
+  const [joinRequests, setJoinRequests] = useState([]);
 
   // Fetch room data
   useEffect(() => {
@@ -36,6 +39,8 @@ export default function WorkspacePage() {
         navigate('/dashboard');
       });
   }, [roomCode, navigate]);
+
+  const isAdmin = roomData?.admin?._id === user?._id || roomData?.admin === user?._id;
 
   // Join room via socket
   useEffect(() => {
@@ -61,13 +66,48 @@ export default function WorkspacePage() {
       setParticipants((prev) => prev.filter((p) => p._id !== userId));
     });
 
+    const handleJoinRequest = ({ userId, username }) => {
+      if (isAdmin) {
+        setJoinRequests(prev => {
+          if (prev.some(r => r.userId === userId)) return prev;
+          return [...prev, { userId, username }];
+        });
+      }
+    };
+    socket.on('room:join-request', handleJoinRequest);
+
+    const handleKicked = ({ roomCode: kickedRoom }) => {
+      if (kickedRoom === roomCode) {
+        alert("You have been kicked from the room by the admin.");
+        navigate('/dashboard');
+      }
+    };
+    socket.on('room:kicked', handleKicked);
+
     return () => {
       socket.emit('room:leave', { roomCode });
       socket.off('room:joined');
       socket.off('room:user-joined');
       socket.off('room:user-left');
+      socket.off('room:join-request', handleJoinRequest);
+      socket.off('room:kicked', handleKicked);
     };
-  }, [socket, roomData, roomCode]);
+  }, [socket, roomData, roomCode, isAdmin, navigate]);
+
+  const handleAdminApprove = async (userId, approve) => {
+    try {
+      await api.post(`/rooms/approve/${roomData._id}`, {
+        userId,
+        action: approve ? 'approve' : 'reject'
+      });
+      if (approve && socket) {
+        socket.emit('room:admit-user', { roomCode, userId });
+      }
+      setJoinRequests(prev => prev.filter(r => r.userId !== userId));
+    } catch (err) {
+      console.error('Action failed');
+    }
+  };
 
   const handleChatToggle = useCallback(() => {
     setShowChat((prev) => !prev);
@@ -87,11 +127,24 @@ export default function WorkspacePage() {
     );
   }
 
-  const isAdmin = roomData?.admin?._id === user?._id || roomData?.admin === user?._id;
-
   return (
-    <div className="workspace">
+    <div className="workspace" style={{ position: 'relative' }}>
       <Navbar roomCode={roomCode} roomName={roomData?.name} isAdmin={isAdmin} roomId={roomData?._id} />
+
+      {/* Join Requests Toast (Admin) */}
+      {isAdmin && joinRequests.length > 0 && (
+        <div style={{ position: 'absolute', top: '70px', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {joinRequests.map(req => (
+            <div key={req.userId} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--accent-blue)', padding: '12px 20px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)' }}>
+              <span style={{ color: 'white' }}><strong>{req.username}</strong> wants to join</span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => handleAdminApprove(req.userId, true)} style={{ background: 'var(--accent-emerald)', color: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>Admit</button>
+                <button onClick={() => handleAdminApprove(req.userId, false)} style={{ background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--text-muted)', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer' }}>Deny</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="workspace-body">
         {/* Sidebar */}
@@ -132,14 +185,39 @@ export default function WorkspacePage() {
           <div style={{ flex: 1 }} />
 
           {/* Participants */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
             {participants.slice(0, 5).map((p, i) => (
               <div
                 key={p._id || p.id || i}
                 className={`participant-avatar p${i}`}
                 title={p.username || p.name}
+                style={{ position: 'relative', cursor: isAdmin && p._id !== user._id ? 'pointer' : 'default' }}
+                onMouseOver={(e) => {
+                  if (isAdmin && p._id !== user._id) {
+                    const kickBtn = e.currentTarget.querySelector('.kick-btn');
+                    if (kickBtn) kickBtn.style.opacity = 1;
+                  }
+                }}
+                onMouseOut={(e) => {
+                  const kickBtn = e.currentTarget.querySelector('.kick-btn');
+                  if (kickBtn) kickBtn.style.opacity = 0;
+                }}
               >
                 {(p.username || p.name || '?').charAt(0).toUpperCase()}
+                {isAdmin && p._id !== user._id && (
+                  <div
+                    className="kick-btn"
+                    onClick={() => socket.emit('room:kick', { roomCode, targetUserId: p._id })}
+                    style={{
+                      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                      background: 'rgba(255,0,0,0.8)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      borderRadius: '50%', opacity: 0, transition: 'opacity 0.2s', fontSize: '12px'
+                    }}
+                    title={`Kick ${p.username || p.name}`}
+                  >
+                    ×
+                  </div>
+                )}
               </div>
             ))}
           </div>

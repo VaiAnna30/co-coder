@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import Navbar from '../components/Layout/Navbar';
 import api from '../utils/api';
 import { Rocket, Link as LinkIcon, FolderOpen, Inbox, Users, Clock, Trash2, DoorOpen, Plus } from 'lucide-react';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { socket } = useSocket();
   const navigate = useNavigate();
 
   const [rooms, setRooms] = useState([]);
@@ -39,6 +41,17 @@ export default function DashboardPage() {
     fetchRooms();
   }, [fetchRooms]);
 
+  // Listen for real-time admission
+  useEffect(() => {
+    if (!socket) return;
+    const handleAdmitted = ({ roomCode }) => {
+      showToast('success', 'You were admitted! Joining room...');
+      setTimeout(() => navigate(`/workspace/${roomCode}`), 1000);
+    };
+    socket.on('room:admitted', handleAdmitted);
+    return () => socket.off('room:admitted', handleAdmitted);
+  }, [socket, navigate, showToast]);
+
   // Extract pending approvals from rooms where user is admin
   useEffect(() => {
     const approvals = [];
@@ -48,6 +61,7 @@ export default function DashboardPage() {
         room.pendingApprovals.forEach((p) => {
           approvals.push({
             roomId: room._id,
+            roomCode: room.roomCode,
             roomName: room.name,
             userId: p._id || p,
             username: p.username || 'Unknown',
@@ -81,8 +95,15 @@ export default function DashboardPage() {
     if (!joinCode.trim()) return;
     setJoining(true);
     try {
-      await api.post('/rooms/join', { roomCode: joinCode.trim() });
-      showToast('success', 'Join request sent!');
+      const res = await api.post('/rooms/join', { roomCode: joinCode.trim() });
+      if (res.data.message === 'Already a participant') {
+        navigate(`/workspace/${joinCode.trim()}`);
+      } else {
+        showToast('success', 'Join request sent!');
+        if (socket) {
+          socket.emit('room:request-join', { roomCode: joinCode.trim() });
+        }
+      }
       setJoinCode('');
       fetchRooms();
     } catch (err) {
@@ -93,13 +114,16 @@ export default function DashboardPage() {
     }
   };
 
-  const handleApprove = async (roomId, userId, approve) => {
+  const handleApprove = async (roomId, roomCode, userId, approve) => {
     try {
       await api.post(`/rooms/approve/${roomId}`, {
         userId,
         action: approve ? 'approve' : 'reject',
       });
       showToast('success', approve ? 'User approved!' : 'User rejected.');
+      if (approve && socket) {
+        socket.emit('room:admit-user', { roomCode, userId });
+      }
       setPendingApprovals((prev) => prev.filter((p) => !(p.roomId === roomId && p.userId === userId)));
       fetchRooms();
     } catch (err) {

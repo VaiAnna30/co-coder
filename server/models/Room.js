@@ -31,12 +31,29 @@ const chatMessageSchema = new mongoose.Schema(
  */
 const strokeSchema = new mongoose.Schema(
   {
-    strokeId: { type: String, required: true },
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     tool: { type: String, default: 'pen' },
     color: { type: String, default: '#000000' },
     width: { type: Number, default: 2 },
-    points: { type: [Number], default: [] }, // flat array [x1,y1,x2,y2,…]
+    x0: { type: Number },
+    y0: { type: Number },
+    x1: { type: Number },
+    y1: { type: Number },
+  },
+  { _id: false }
+);
+
+/**
+ * File Schema — embedded in Room.files
+ */
+const fileSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    type: { type: String, enum: ['file', 'folder'], default: 'file' },
+    parentId: { type: String, default: null }, // null means root
+    language: { type: String, default: 'javascript' },
+    content: { type: String, default: '' },
   },
   { _id: false }
 );
@@ -48,8 +65,9 @@ const strokeSchema = new mongoose.Schema(
  * - admin             : creator / owner of the room
  * - participants      : array of user refs (max 5)
  * - pendingApprovals  : users waiting for admin approval to join
- * - code              : the collaborative code document
- * - language          : programming language mode
+ * - code              : the collaborative code document (legacy)
+ * - language          : programming language mode (legacy)
+ * - files             : array of files for the project
  * - whiteboardData    : array of strokes
  * - chatHistory       : array of chat messages
  */
@@ -93,6 +111,17 @@ const roomSchema = new mongoose.Schema(
       type: String,
       default: 'javascript',
     },
+    files: {
+      type: [fileSchema],
+      default: [
+        {
+          id: '1',
+          name: 'main.js',
+          language: 'javascript',
+          content: '// Start coding collaboratively!\n',
+        },
+      ],
+    },
     whiteboardData: {
       type: [strokeSchema],
       default: [],
@@ -117,6 +146,11 @@ roomSchema.pre('save', function (next) {
     const err = new Error('Room cannot have more than 5 participants');
     err.statusCode = 400;
     return next(err);
+  }
+  
+  // Migration for legacy rooms
+  if (this.isModified('code') && this.files.length > 0) {
+    // legacy support handled in handlers
   }
   next();
 });

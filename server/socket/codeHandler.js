@@ -1,82 +1,91 @@
 const Room = require('../models/Room');
 
-/**
- * Code collaboration handler
- * Events:
- *   code:change   — a participant has edited the code document
- *   code:sync     — a participant requests the current code state
- *   code:language — a participant changes the language mode
- */
 module.exports = (io, socket) => {
-  /**
-   * code:change
-   * Payload: { roomCode, code }
-   * Broadcasts the updated code to all OTHER users in the room
-   * and persists it to MongoDB.
-   */
+  // Legacy support for single-file editor (for backwards compatibility if needed)
   const handleCodeChange = async ({ roomCode, code }) => {
     try {
-      // Broadcast to others in the room
-      socket.to(roomCode).emit('code:update', {
-        code,
-        userId: socket.user._id,
-        username: socket.user.username,
-      });
-
-      // Persist to database
-      await Room.findOneAndUpdate(
-        { roomCode },
-        { code },
-        { new: true }
-      );
+      socket.to(roomCode).emit('code:update', { code, userId: socket.user._id, username: socket.user.username });
+      await Room.findOneAndUpdate({ roomCode }, { code }, { new: true });
     } catch (error) {
       console.error('code:change error:', error.message);
-      socket.emit('error:message', { message: 'Failed to save code changes' });
     }
   };
 
-  /**
-   * code:sync
-   * Payload: { roomCode }
-   * Sends the current code state back to the requesting socket.
-   */
   const handleCodeSync = async ({ roomCode }) => {
     try {
-      const room = await Room.findOne({ roomCode }).select('code language');
-
+      const room = await Room.findOne({ roomCode }).select('code language files');
       if (room) {
-        socket.emit('code:update', {
+        // Send both legacy code and new files array
+        socket.emit('code:sync', {
           code: room.code,
           language: room.language,
+          files: room.files && room.files.length > 0 ? room.files : [{ id: '1', name: 'main.js', language: room.language || 'javascript', content: room.code }]
         });
       }
     } catch (error) {
       console.error('code:sync error:', error.message);
-      socket.emit('error:message', { message: 'Failed to sync code' });
     }
   };
 
-  /**
-   * code:language
-   * Payload: { roomCode, language }
-   * Broadcasts language change and persists it.
-   */
   const handleLanguageChange = async ({ roomCode, language }) => {
     try {
-      socket.to(roomCode).emit('code:language', {
-        language,
-        userId: socket.user._id,
-        username: socket.user.username,
-      });
-
-      await Room.findOneAndUpdate(
-        { roomCode },
-        { language },
-        { new: true }
-      );
+      socket.to(roomCode).emit('code:language', { language, userId: socket.user._id, username: socket.user.username });
+      await Room.findOneAndUpdate({ roomCode }, { language }, { new: true });
     } catch (error) {
       console.error('code:language error:', error.message);
-      socket.emit('error:message', { message: 'Failed to update language' });
+    }
+  };
+
+  // --- NEW FILE SYSTEM EVENTS ---
+
+  const handleFileChange = async ({ roomCode, fileId, content }) => {
+    try {
+      // Broadcast to others
+      socket.to(roomCode).emit('file:change', { fileId, content, userId: socket.user._id, username: socket.user.username });
+      // Update DB
+      await Room.findOneAndUpdate(
+        { roomCode, 'files.id': fileId },
+        { $set: { 'files.$.content': content } }
+      );
+    } catch (error) {
+      console.error('file:change error:', error.message);
+    }
+  };
+
+  const handleFileCreate = async ({ roomCode, file }) => {
+    try {
+      const room = await Room.findOneAndUpdate(
+        { roomCode },
+        { $push: { files: file } },
+        { new: true }
+      );
+      socket.to(roomCode).emit('file:create', { file, userId: socket.user._id, username: socket.user.username });
+    } catch (error) {
+      console.error('file:create error:', error.message);
+    }
+  };
+
+  const handleFileDelete = async ({ roomCode, fileId }) => {
+    try {
+      await Room.findOneAndUpdate(
+        { roomCode },
+        { $pull: { files: { id: fileId } } }
+      );
+      socket.to(roomCode).emit('file:delete', { fileId, userId: socket.user._id, username: socket.user.username });
+    } catch (error) {
+      console.error('file:delete error:', error.message);
+    }
+  };
+
+  const handleFileRename = async ({ roomCode, fileId, newName, newLanguage }) => {
+    try {
+      await Room.findOneAndUpdate(
+        { roomCode, 'files.id': fileId },
+        { $set: { 'files.$.name': newName, 'files.$.language': newLanguage } }
+      );
+      socket.to(roomCode).emit('file:rename', { fileId, newName, newLanguage, userId: socket.user._id, username: socket.user.username });
+    } catch (error) {
+      console.error('file:rename error:', error.message);
     }
   };
 
@@ -84,4 +93,9 @@ module.exports = (io, socket) => {
   socket.on('code:change', handleCodeChange);
   socket.on('code:sync', handleCodeSync);
   socket.on('code:language', handleLanguageChange);
+  
+  socket.on('file:change', handleFileChange);
+  socket.on('file:create', handleFileCreate);
+  socket.on('file:delete', handleFileDelete);
+  socket.on('file:rename', handleFileRename);
 };

@@ -1,4 +1,4 @@
-import { PenTool, Highlighter, Eraser, Trash2 } from 'lucide-react';
+import { PenTool, Highlighter, Eraser, Trash2, Square, Circle, Minus } from 'lucide-react';
 
 export default function Toolbar({ tool, setTool, color, setColor, strokeWidth, setStrokeWidth, onClear }) {
   return (
@@ -17,6 +17,33 @@ export default function Toolbar({ tool, setTool, color, setColor, strokeWidth, s
       >
         <Highlighter size={18} />
       </button>
+      
+      <div className="toolbar-divider" />
+      
+      <button
+        className={`tool-btn ${tool === 'rect' ? 'active' : ''}`}
+        onClick={() => setTool('rect')}
+        title="Rectangle"
+      >
+        <Square size={18} />
+      </button>
+      <button
+        className={`tool-btn ${tool === 'circle' ? 'active' : ''}`}
+        onClick={() => setTool('circle')}
+        title="Circle"
+      >
+        <Circle size={18} />
+      </button>
+      <button
+        className={`tool-btn ${tool === 'line' ? 'active' : ''}`}
+        onClick={() => setTool('line')}
+        title="Line"
+      >
+        <Minus size={18} />
+      </button>
+
+      <div className="toolbar-divider" />
+
       <button
         className={`tool-btn ${tool === 'eraser' ? 'active' : ''}`}
         onClick={() => setTool('eraser')}

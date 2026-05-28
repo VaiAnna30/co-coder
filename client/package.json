@@ -13,6 +13,8 @@
     "@thaunknown/simple-peer": "^10.1.0",
     "@vitejs/plugin-react": "^4.3.4",
     "axios": "^1.7.9",
+    "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
     "lucide-react": "^1.16.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

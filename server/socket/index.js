@@ -55,55 +55,50 @@ const initSocket = (httpServer) => {
 
   // ─── Connection Handler ──────────────────────────────────────────────────
   io.on('connection', (socket) => {
-    console.log(
-      `⚡ Socket connected: ${socket.user.username} (${socket.id})`
-    );
+    console.log(`⚡ Socket connected: ${socket.user.username} (${socket.id})`);
+
+    // Join personal room for direct messages (like admission alerts)
+    socket.join(socket.user._id.toString());
 
     // ── Room join ──────────────────────────────────────────────────────────
     socket.on('room:join', async ({ roomCode }) => {
       try {
-        const room = await Room.findOne({ roomCode })
-          .populate('participants', 'username email');
+        const room = await Room.findOne({ roomCode }).populate('participants', 'username email');
+        if (!room) return socket.emit('error:message', { message: 'Room not found' });
 
-        if (!room) {
-          return socket.emit('error:message', { message: 'Room not found' });
-        }
+        const isParticipant = room.participants.some((p) => p._id.equals(socket.user._id));
+        if (!isParticipant) return socket.emit('error:message', { message: 'You are not a participant of this room' });
 
-        // Verify user is a participant
-        const isParticipant = room.participants.some((p) =>
-          p._id.equals(socket.user._id)
-        );
-
-        if (!isParticipant) {
-          return socket.emit('error:message', {
-            message: 'You are not a participant of this room',
-          });
-        }
-
-        // Join the Socket.io room
         socket.join(roomCode);
-
-        // Store the current room on the socket for cleanup on disconnect
         socket.currentRoom = roomCode;
 
-        console.log(
-          `📌 ${socket.user.username} joined room ${roomCode}`
-        );
-
-        // Notify others in the room
-        socket.to(roomCode).emit('room:user-joined', {
-          userId: socket.user._id,
-          username: socket.user.username,
-        });
-
-        // Send participant list to the joining user
-        socket.emit('room:joined', {
-          roomCode,
-          participants: room.participants,
-        });
+        socket.to(roomCode).emit('room:user-joined', { userId: socket.user._id, username: socket.user.username });
+        socket.emit('room:joined', { roomCode, participants: room.participants });
       } catch (error) {
-        console.error('room:join error:', error.message);
         socket.emit('error:message', { message: 'Failed to join room' });
+      }
+    });
+
+    socket.on('room:request-join', ({ roomCode }) => {
+      // Broadcast to the room so the admin can see the request
+      socket.to(roomCode).emit('room:join-request', { userId: socket.user._id, username: socket.user.username });
+    });
+
+    socket.on('room:admit-user', ({ roomCode, userId }) => {
+      // Direct message to the waiting user's personal room
+      io.to(userId.toString()).emit('room:admitted', { roomCode });
+    });
+
+    socket.on('room:kick', async ({ roomCode, targetUserId }) => {
+      try {
+        await Room.findOneAndUpdate(
+          { roomCode },
+          { $pull: { participants: targetUserId } }
+        );
+        io.to(targetUserId.toString()).emit('room:kicked', { roomCode });
+        socket.to(roomCode).emit('room:user-left', { userId: targetUserId });
+      } catch (err) {
+        console.error('Kick error:', err);
       }
     });
 
@@ -111,15 +106,7 @@ const initSocket = (httpServer) => {
     socket.on('room:leave', ({ roomCode }) => {
       socket.leave(roomCode);
       socket.currentRoom = null;
-
-      console.log(
-        `📤 ${socket.user.username} left room ${roomCode}`
-      );
-
-      socket.to(roomCode).emit('room:user-left', {
-        userId: socket.user._id,
-        username: socket.user.username,
-      });
+      socket.to(roomCode).emit('room:user-left', { userId: socket.user._id, username: socket.user.username });
     });
 
     // ── Register sub-handlers ──────────────────────────────────────────────
