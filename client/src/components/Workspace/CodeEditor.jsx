@@ -25,6 +25,7 @@ export default function CodeEditor({ roomCode, socket, language: initialLang }) 
   const [files, setFiles] = useState([{ id: '1', name: 'main.js', language: initialLang || 'javascript', content: '// Start coding collaboratively!\n' }]);
   const [activeFileId, setActiveFileId] = useState('1');
   const [openFileIds, setOpenFileIds] = useState(['1']); // Array of open tab IDs
+  const [isFilesOpen, setIsFilesOpen] = useState(false);
   const isRemoteUpdate = useRef(false);
   const editorRef = useRef(null);
   const debounceTimer = useRef(null);
@@ -210,18 +211,30 @@ export default function CodeEditor({ roomCode, socket, language: initialLang }) 
 
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%' }}>
-      <FileExplorer 
-        files={files}
-        activeFileId={activeFileId}
-        onSelectFile={handleSelectFile}
-        onCreateFile={handleCreateFile}
-        onDeleteFile={handleDeleteFile}
-        onRenameFile={handleRenameFile}
-      />
+      <div className={`file-explorer-wrapper ${isFilesOpen ? 'open' : ''}`} style={{ height: '100%', zIndex: 50 }}>
+        <FileExplorer 
+          files={files}
+          activeFileId={activeFileId}
+          onSelectFile={(id) => { handleSelectFile(id); setIsFilesOpen(false); }}
+          onCreateFile={handleCreateFile}
+          onDeleteFile={handleDeleteFile}
+          onRenameFile={handleRenameFile}
+        />
+      </div>
       
+      {/* Mobile overlay backdrop */}
+      {isFilesOpen && (
+        <div 
+          className="mobile-backdrop" 
+          onClick={() => setIsFilesOpen(false)}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }}
+        />
+      )}
+
       <div className="editor-container" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%', background: 'var(--bg-primary)' }}>
         {/* VS Code Style Tabs */}
         <div style={{ display: 'flex', background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-color)', overflowX: 'auto', minHeight: '35px' }}>
+          <button onClick={() => setIsFilesOpen(!isFilesOpen)} style={{ padding: '0 10px', background: 'transparent', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>☰</button>
           {openFileIds.map(id => {
             const f = files.find(file => file.id === id);
             if (!f) return null;

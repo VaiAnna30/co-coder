@@ -185,7 +185,7 @@ export default function WorkspacePage() {
           <div style={{ flex: 1 }} />
 
           {/* Participants */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+          <div className="participants-wrapper">
             {participants.slice(0, 5).map((p, i) => (
               <div
                 key={p._id || p.id || i}
