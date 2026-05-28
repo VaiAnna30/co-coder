@@ -1608,6 +1608,11 @@ select.input {
     z-index: 100;
   }
   
+  .video-panel.collapsed {
+    pointer-events: none;
+    visibility: hidden;
+  }
+  
   .participants-wrapper {
     flex-direction: row;
   }
@@ -1616,6 +1621,10 @@ select.input {
     flex-wrap: wrap;
     justify-content: center;
     bottom: 70px; /* Above the bottom nav */
+  }
+  
+  .execution-panel {
+    min-height: 120px; /* Leave more room for the code editor on mobile */
   }
 }
 
