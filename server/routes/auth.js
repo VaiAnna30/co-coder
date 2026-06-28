@@ -53,16 +53,19 @@ router.post('/register', async (req, res) => {
     // Store OTP in Redis with 10 minutes expiration
     await redisClient.setEx(`otp:${email}`, 600, otp);
 
-    // Publish event to Kafka
-    await producer.send({
-      topic: 'auth-events',
-      messages: [
-        {
-          key: email,
-          value: JSON.stringify({ type: 'USER_REGISTERED', email, otp }),
-        },
-      ],
-    });
+    const eventPayload = { type: 'USER_REGISTERED', email, otp };
+
+    if (process.env.KAFKA_BROKERS && producer) {
+      // Publish event to Kafka
+      await producer.send({
+        topic: 'auth-events',
+        messages: [{ key: email, value: JSON.stringify(eventPayload) }],
+      });
+    } else {
+      // Fallback to Redis Pub/Sub
+      const { redisClient } = require('../config/redis');
+      await redisClient.publish('auth-events', JSON.stringify(eventPayload));
+    }
 
     res.status(201).json({
       message: 'Registration successful. Please check your email for the OTP to verify your account.',

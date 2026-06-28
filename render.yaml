@@ -18,14 +18,6 @@ services:
         sync: false
       - key: JWT_SECRET
         generateValue: true
-      - key: KAFKA_BROKERS
-        sync: false
-      - key: KAFKA_USERNAME
-        sync: false
-      - key: KAFKA_PASSWORD
-        sync: false
-      - key: KAFKA_SSL
-        value: "true"
       - key: GMAIL_USER
         sync: false
       - key: GMAIL_APP_PASSWORD

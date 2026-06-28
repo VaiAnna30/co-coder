@@ -18,7 +18,7 @@ const connectDB = require("./config/db");
 const initSocket = require("./socket/index");
 const { connectRedis } = require("./config/redis");
 const { connectKafkaProducer } = require("./config/kafka");
-const { startEmailWorker } = require("./workers/emailWorker");
+const { startEmailWorker, startRedisEmailWorker } = require("./workers/emailWorker");
 
 // Route modules
 const authRoutes = require("./routes/auth");
@@ -87,8 +87,12 @@ const start = async () => {
   await connectRedis();
   await connectKafkaProducer();
 
-  // Start the email worker (Kafka consumer)
-  startEmailWorker();
+  // Start the appropriate email worker
+  if (process.env.KAFKA_BROKERS) {
+    startEmailWorker();
+  } else {
+    startRedisEmailWorker();
+  }
 
   server.listen(PORT, () => {
     console.log(`🚀 CoCode server running on port ${PORT}`);
