@@ -37,7 +37,7 @@ The backend is a **Node.js / Express.js** monolithic web service.
 
 ---
 
-## 🧠 System Architecture & Deep Dive (Interview Prep)
+## 🧠 System Architecture & Deep Dive
 
 If you are reviewing this project for a technical interview, here is a deep dive into how the core systems operate under the hood.
 

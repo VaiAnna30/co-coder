@@ -1093,20 +1093,28 @@ select.input {
 
 /* ---------- Video Panel ---------- */
 .video-panel {
-  width: 260px;
-  background: rgba(15, 23, 42, 0.9);
-  border-left: 1px solid var(--border-default);
+  position: absolute;
+  top: 70px;
+  right: 24px;
+  width: 320px;
+  max-height: calc(100vh - 100px);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(12px);
-  transition: width var(--transition-base), opacity var(--transition-base);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: opacity var(--transition-base), transform var(--transition-base);
   overflow: hidden;
+  z-index: var(--z-modal);
 }
 
 .video-panel.collapsed {
-  width: 0;
   opacity: 0;
-  border-left: none;
+  pointer-events: none;
+  transform: translateY(-20px) scale(0.95);
 }
 
 .video-panel-header {
@@ -1208,17 +1216,21 @@ select.input {
 /* ---------- Chat Panel ---------- */
 .chat-panel {
   position: absolute;
-  top: 0;
-  right: 0;
+  bottom: 24px;
+  right: 24px;
+  top: auto;
   width: 340px;
-  height: 100%;
+  height: 500px;
+  max-height: calc(100vh - 100px);
   background: rgba(15, 23, 42, 0.95);
-  border-left: 1px solid var(--border-default);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   display: flex;
   flex-direction: column;
-  z-index: var(--z-dropdown);
+  z-index: var(--z-modal);
   animation: slideInRight 0.3s ease-out;
 }
 
@@ -1693,6 +1705,12 @@ select.input {
   border-top: 1px solid var(--border-default);
   display: flex;
   flex-direction: column;
+}
+
+.execution-panel.collapsed {
+  height: auto;
+  min-height: 0;
+  max-height: none;
 }
 
 .execution-header {

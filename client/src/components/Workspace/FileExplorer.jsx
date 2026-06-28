@@ -92,9 +92,7 @@ const FileTreeItem = ({
                 </>
               )}
               <button onClick={(e) => { e.stopPropagation(); setEditName(file.name); setEditingId(file.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} title="Rename"><Edit2 size={14} /></button>
-              {file.id !== '1' && (
-                <button onClick={(e) => { e.stopPropagation(); onDeleteFile(file.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} title="Delete"><Trash2 size={14} /></button>
-              )}
+              <button onClick={(e) => { e.stopPropagation(); onDeleteFile(file.id); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} title="Delete"><Trash2 size={14} /></button>
             </>
           )}
         </div>
@@ -107,7 +105,7 @@ const FileTreeItem = ({
               {creatingState.type === 'folder' ? <Folder size={16} color="var(--accent-blue)" /> : <File size={16} color="var(--text-muted)" />}
               <input
                 autoFocus
-                style={{ flex: 1, minWidth: 0, background: 'var(--bg-primary)', border: '1px solid var(--accent-blue)', color: 'white', padding: '2px 4px', borderRadius: '2px' }}
+                style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', background: 'var(--bg-primary)', border: '1px solid var(--accent-blue)', color: 'white', padding: '2px 4px', borderRadius: '2px' }}
                 value={creatingState.name}
                 onChange={(e) => setCreatingState(prev => ({ ...prev, name: e.target.value }))}
                 onKeyDown={(e) => {
@@ -229,7 +227,7 @@ export default function FileExplorer({ files, activeFileId, onSelectFile, onCrea
             {creatingState.type === 'folder' ? <Folder size={16} color="var(--accent-blue)" /> : <File size={16} color="var(--text-muted)" />}
             <input
               autoFocus
-              style={{ flex: 1, minWidth: 0, background: 'var(--bg-primary)', border: '1px solid var(--accent-blue)', color: 'white', padding: '2px 4px', borderRadius: '2px' }}
+              style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', background: 'var(--bg-primary)', border: '1px solid var(--accent-blue)', color: 'white', padding: '2px 4px', borderRadius: '2px' }}
               value={creatingState.name}
               onChange={(e) => setCreatingState(prev => ({ ...prev, name: e.target.value }))}
               onKeyDown={(e) => {

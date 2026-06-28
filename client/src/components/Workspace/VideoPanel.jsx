@@ -6,6 +6,64 @@ export default function VideoPanel({ roomCode, socket, user, participants, colla
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const localVideoRef = useRef(null);
+  const dragRef = useRef(null);
+  const handleRef = useRef(null);
+
+  // Drag logic
+  useEffect(() => {
+    const el = dragRef.current;
+    const handle = handleRef.current;
+    if (!el || !handle) return;
+    
+    let isDragging = false;
+    let startX, startY, initialLeft, initialTop;
+    
+    const onMouseDown = (e) => {
+      // Don't drag if clicking buttons
+      if (e.target.closest('button')) return;
+      
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      const rect = el.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+      el.style.left = initialLeft + 'px';
+      el.style.top = initialTop + 'px';
+      el.style.transition = 'none';
+      
+      document.body.style.userSelect = 'none';
+    };
+    
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      el.style.left = initialLeft + dx + 'px';
+      el.style.top = initialTop + dy + 'px';
+    };
+    
+    const onMouseUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        document.body.style.userSelect = '';
+        el.style.transition = '';
+      }
+    };
+    
+    handle.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    
+    return () => {
+      handle.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
 
   const { localStream, remoteStreams, toggleMic, toggleCam, startMedia, stopMedia } = useWebRTC({
     roomCode,
@@ -42,11 +100,11 @@ export default function VideoPanel({ roomCode, socket, user, participants, colla
   const initial = user?.username ? user.username.charAt(0).toUpperCase() : '?';
 
   return (
-    <div className={`video-panel ${collapsed ? 'collapsed' : ''}`}>
+    <div ref={dragRef} className={`video-panel ${collapsed ? 'collapsed' : ''}`}>
       {!collapsed && (
         <>
-          <div className="video-panel-header">
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div ref={handleRef} className="video-panel-header" style={{ cursor: 'grab' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
               <Video size={18} /> Video
             </h3>
             <button

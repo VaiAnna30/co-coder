@@ -3,3 +3,4 @@ client/node_modules/
 server/node_modules/
 client/dist/
 .env
+CoCode_Interview_Guide.md

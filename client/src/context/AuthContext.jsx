@@ -36,6 +36,11 @@ export function AuthProvider({ children }) {
 
   const register = useCallback(async (username, email, password) => {
     const res = await api.post('/auth/register', { username, email, password });
+    return res.data;
+  }, []);
+
+  const verifyEmail = useCallback(async (email, otp) => {
+    const res = await api.post('/auth/verify-email', { email, otp });
     const { token, user: userData } = res.data;
     localStorage.setItem('cocode_token', token);
     setUser(userData);
@@ -48,7 +53,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, verifyEmail, logout }}>
       {children}
     </AuthContext.Provider>
   );

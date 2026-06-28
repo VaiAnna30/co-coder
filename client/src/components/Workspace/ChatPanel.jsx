@@ -7,6 +7,65 @@ export default function ChatPanel({ roomCode, socket, user, onClose, onNewMessag
   const [closing, setClosing] = useState(false);
   const messagesEndRef = useRef(null);
 
+  const dragRef = useRef(null);
+  const handleRef = useRef(null);
+
+  // Drag logic
+  useEffect(() => {
+    const el = dragRef.current;
+    const handle = handleRef.current;
+    if (!el || !handle) return;
+    
+    let isDragging = false;
+    let startX, startY, initialLeft, initialTop;
+    
+    const onMouseDown = (e) => {
+      // Don't drag if clicking buttons
+      if (e.target.closest('button')) return;
+      
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      const rect = el.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+      
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+      el.style.left = initialLeft + 'px';
+      el.style.top = initialTop + 'px';
+      el.style.transition = 'none';
+      
+      document.body.style.userSelect = 'none';
+    };
+    
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      el.style.left = initialLeft + dx + 'px';
+      el.style.top = initialTop + dy + 'px';
+    };
+    
+    const onMouseUp = () => {
+      if (isDragging) {
+        isDragging = false;
+        document.body.style.userSelect = '';
+        el.style.transition = '';
+      }
+    };
+    
+    handle.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+    
+    return () => {
+      handle.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
   // Auto-scroll to bottom
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -67,9 +126,9 @@ export default function ChatPanel({ roomCode, socket, user, onClose, onNewMessag
   };
 
   return (
-    <div className={`chat-panel ${closing ? 'closing' : ''}`}>
-      <div className="chat-header">
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div ref={dragRef} className={`chat-panel ${closing ? 'closing' : ''}`}>
+      <div ref={handleRef} className="chat-header" style={{ cursor: 'grab' }}>
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
           <MessageSquare size={18} /> Chat
         </h3>
         <button className="btn btn-ghost btn-icon" onClick={handleClose} title="Close chat">

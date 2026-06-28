@@ -12,12 +12,17 @@ const LANGUAGES = [
   { value: 'plaintext', label: 'Plain Text' },
 ];
 
+const RUNNABLE_LANGUAGES = ['javascript', 'python', 'java', 'cpp', 'c'];
+
 const getLanguageFromFileName = (name) => {
-  if (name.endsWith('.js')) return 'javascript';
-  if (name.endsWith('.py')) return 'python';
-  if (name.endsWith('.java')) return 'java';
-  if (name.endsWith('.cpp') || name.endsWith('.cc')) return 'cpp';
-  if (name.endsWith('.c') || name.endsWith('.h')) return 'c';
+  const lowerName = name.toLowerCase();
+  if (lowerName.endsWith('.js')) return 'javascript';
+  if (lowerName.endsWith('.py')) return 'python';
+  if (lowerName.endsWith('.java')) return 'java';
+  if (lowerName.endsWith('.cpp') || lowerName.endsWith('.cc') || lowerName.endsWith('.c++') || lowerName.endsWith('.cxx')) return 'cpp';
+  if (lowerName.endsWith('.c') || lowerName.endsWith('.h')) return 'c';
+  if (lowerName.endsWith('.html')) return 'html';
+  if (lowerName.endsWith('.css')) return 'css';
   return 'plaintext';
 };
 
@@ -25,12 +30,12 @@ export default function CodeEditor({ roomCode, socket, language: initialLang }) 
   const [files, setFiles] = useState([{ id: '1', name: 'main.js', language: initialLang || 'javascript', content: '// Start coding collaboratively!\n' }]);
   const [activeFileId, setActiveFileId] = useState('1');
   const [openFileIds, setOpenFileIds] = useState(['1']); // Array of open tab IDs
-  const [isFilesOpen, setIsFilesOpen] = useState(false);
+  const [isFilesOpen, setIsFilesOpen] = useState(window.innerWidth > 768);
   const isRemoteUpdate = useRef(false);
   const editorRef = useRef(null);
   const debounceTimer = useRef(null);
 
-  const activeFile = files.find(f => f.id === activeFileId) || files[0];
+  const activeFile = activeFileId ? files.find(f => f.id === activeFileId) : null;
 
   const activeFileIdRef = useRef(activeFileId);
   useEffect(() => {
@@ -211,7 +216,7 @@ export default function CodeEditor({ roomCode, socket, language: initialLang }) 
 
   return (
     <div style={{ display: 'flex', height: '100%', width: '100%' }}>
-      <div className={`file-explorer-wrapper ${isFilesOpen ? 'open' : ''}`} style={{ height: '100%', zIndex: 50 }}>
+      <div className={`file-explorer-wrapper ${isFilesOpen ? 'open' : ''}`} style={{ height: '100%', zIndex: 50, display: (window.innerWidth > 768 && !isFilesOpen) ? 'none' : '' }}>
         <FileExplorer 
           files={files}
           activeFileId={activeFileId}
@@ -265,6 +270,19 @@ export default function CodeEditor({ roomCode, socket, language: initialLang }) 
               </div>
             );
           })}
+          
+          <div style={{ flex: 1 }} />
+          {activeFile && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingRight: '16px' }}>
+              <span style={{ fontSize: 'var(--fs-xs)', padding: '2px 8px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                {LANGUAGES.find(l => l.value === activeFile.language)?.label || 'Plain Text'}
+              </span>
+              <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-emerald)', display: 'inline-block' }} />
+                Live
+              </span>
+            </div>
+          )}
         </div>
 
         {!activeFile ? (
@@ -275,23 +293,6 @@ export default function CodeEditor({ roomCode, socket, language: initialLang }) 
           </div>
         ) : (
           <>
-            <div className="editor-toolbar">
-              <div className="editor-toolbar-left" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{activeFile.name}</span>
-                <select className="language-select" value={activeFile.language} onChange={handleLanguageChange}>
-                  {LANGUAGES.map((l) => (
-                    <option key={l.value} value={l.value}>{l.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="editor-toolbar-right">
-                <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent-emerald)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-emerald)', display: 'inline-block' }} />
-                  Live
-                </span>
-              </div>
-            </div>
-
             <div style={{ flex: 1, minHeight: 0 }}>
               <Editor
                 height="100%"
@@ -313,7 +314,9 @@ export default function CodeEditor({ roomCode, socket, language: initialLang }) 
               />
             </div>
 
-            <ExecutionPanel code={activeFile.content} language={activeFile.language} />
+            {RUNNABLE_LANGUAGES.includes(activeFile.language) && (
+              <ExecutionPanel code={activeFile.content} language={activeFile.language} />
+            )}
           </>
         )}
       </div>

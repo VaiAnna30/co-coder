@@ -100,7 +100,7 @@ router.post('/execute', async (req, res) => {
     else if (language === 'java') {
       const filePath = path.join(tempDir, 'Main.java');
       await fs.writeFile(filePath, code);
-      
+
       // Compile
       const compileResult = await runCommand('javac', ['Main.java'], '', tempDir);
       if (compileResult.code !== 0) {

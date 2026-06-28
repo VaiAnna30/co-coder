@@ -19,7 +19,9 @@ module.exports = (io, socket) => {
         socket.emit('code:sync', {
           code: room.code,
           language: room.language,
-          files: room.files && room.files.length > 0 ? room.files : [{ id: '1', name: 'main.js', language: room.language || 'javascript', content: room.code }]
+          files: Array.isArray(room.files) && room.files.length > 0 
+            ? room.files 
+            : (Array.isArray(room.files) && room.files.length === 0 ? [] : [{ id: '1', name: 'main.js', language: room.language || 'javascript', content: room.code }])
         });
       }
     } catch (error) {
