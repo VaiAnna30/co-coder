@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: cocode-app
+    env: node
+    buildCommand: npm install --prefix server && npm install --prefix client && npm run build --prefix client
+    startCommand: npm start --prefix server
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+      - key: REDIS_URI
+        fromService:
+          type: redis
+          name: cocode-redis
+          property: connectionString
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: KAFKA_BROKERS
+        sync: false
+      - key: KAFKA_USERNAME
+        sync: false
+      - key: KAFKA_PASSWORD
+        sync: false
+      - key: KAFKA_SSL
+        value: "true"
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_APP_PASSWORD
+        sync: false
+
+  - type: redis
+    name: cocode-redis
+    ipAllowList: [] # Allows internal connections only
+    plan: free
