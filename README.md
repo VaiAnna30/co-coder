@@ -8,11 +8,11 @@ This project was built to solve the disjointed experience of remote technical in
 
 ## 🚀 Key Features
 
-1. **VS-Code Style File System**: A hierarchical folder and file structure allowing users to create, rename, and delete multiple files within a single workspace.
+1. **Advanced File System**: A hierarchical file structure with VS-Code style tabs, supporting creation, renaming, and deletion. Features automatic language detection based on file extensions.
 2. **Real-time Collaborative Editor**: Built on top of Microsoft's Monaco Editor (the engine behind VS Code) with sub-second synchronization across all clients in the room.
-3. **Remote Code Execution**: Integrated with the Piston API to compile and execute arbitrary code in isolated Docker containers, displaying stdout/stderr in a built-in terminal.
+3. **Remote Code Execution**: Integrated with the Piston API to compile and execute arbitrary code in isolated Docker containers, displaying output in a collapsible bottom terminal.
 4. **Collaborative Whiteboard**: An HTML5 Canvas-based whiteboard supporting real-time drawing, highlighting, and shape creation for system design discussions.
-5. **WebRTC Video/Audio Chat**: Native browser Peer-to-Peer (P2P) mesh networking for low-latency video and audio communication.
+5. **WebRTC Video/Audio Chat**: Native browser Peer-to-Peer (P2P) mesh networking for low-latency communication, encapsulated in modern, draggable floating UI glassmorphism panels.
 6. **Admin Controls & Security**: Room creators have admin privileges to admit or kick users from the workspace.
 
 ---
@@ -29,11 +29,13 @@ The frontend is a **React (Vite)** Single Page Application (SPA).
 *   **Styling**: Vanilla CSS utilizing custom variables and CSS Grid/Flexbox for a fully responsive layout (including mobile drawer overlays and bottom navigation).
 
 ### Backend (Server)
-The backend is a **Node.js / Express.js** monolithic web service.
+The backend is a **Node.js / Express.js** web service designed for scale.
 
 *   **Real-time Engine (`socket.io`)**: The core of the collaborative experience. It acts as the central router for broadcasting events and as the signaling server for WebRTC.
 *   **Database (`MongoDB` / `Mongoose`)**: Stores User credentials and Room data (including the deeply nested file system structures).
+*   **Event Streaming & Caching (`Kafka` & `Redis`)**: Redis is utilized for high-speed PUB/SUB across scaled server instances, and Kafka serves as a robust message broker ensuring reliable event delivery and message durability.
 *   **Authentication (`jsonwebtoken`, `bcrypt`)**: Secures routes and ensures only authorized users can join rooms or execute code.
+*   **Containerization (`Docker`)**: A pre-configured `docker-compose` environment seamlessly boots up Redis, Kafka, and Zookeeper for instant local development.
 
 ---
 
@@ -92,3 +94,25 @@ Building an IDE for mobile devices required strict layout control:
 *   **CRDT Integration**: Upgrading the simple "last-write-wins" socket broadcasting to use Conflict-Free Replicated Data Types (CRDTs) like `Yjs` for true Google-Docs style simultaneous editing with multi-colored cursors.
 *   **WebRTC SFU**: Migrating from a Full Mesh topology to an SFU (Selective Forwarding Unit) media server to support 50+ participants in a single room without exhausting client bandwidth.
 *   **GitHub Integration**: Allowing users to clone public repositories directly into the CoCode file system.
+
+---
+
+## 🛠 Local Setup & Installation
+
+1. **Start Infrastructure Services**: 
+   Ensure Docker is installed and running, then spin up Redis and Kafka:
+   ```bash
+   docker-compose up -d
+   ```
+2. **Start the Backend**:
+   ```bash
+   cd server
+   npm install
+   npm run dev
+   ```
+3. **Start the Frontend**:
+   ```bash
+   cd client
+   npm install
+   npm run dev
+   ```
