@@ -23,6 +23,8 @@ services:
         sync: false
       - key: GMAIL_APP_PASSWORD
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
 
   - type: redis
     name: cocode-redis

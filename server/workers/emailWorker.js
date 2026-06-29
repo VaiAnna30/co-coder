@@ -1,32 +1,36 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { consumer } = require('../config/kafka');
 const { redisClient } = require('../config/redis');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-});
+// Initialize Resend with the API key from environment variables
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmailLogic = async (email, otp) => {
   console.log(`Sending OTP to ${email}`);
-  const mailOptions = {
-    from: `"CoCode Collaborative IDE" <${process.env.GMAIL_USER}>`,
-    to: email,
-    subject: 'Verify your email - CoCode',
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Welcome to CoCode!</h2>
-        <p>Please use the following 6-digit OTP to verify your email address:</p>
-        <h1 style="background: #f4f4f4; padding: 10px; text-align: center; letter-spacing: 5px;">${otp}</h1>
-        <p>This code will expire in 10 minutes.</p>
-      </div>
-    `,
-  };
-  await transporter.sendMail(mailOptions);
-  console.log(`Email successfully sent to ${email}`);
+  
+  try {
+    const { data, error } = await resend.emails.send({
+      from: 'CoCode Collaborative IDE <onboarding@resend.dev>', // Resend provides a free testing domain. Once you add your own domain, change this.
+      to: email,
+      subject: 'Verify your email - CoCode',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Welcome to CoCode!</h2>
+          <p>Please use the following 6-digit OTP to verify your email address:</p>
+          <h1 style="background: #f4f4f4; padding: 10px; text-align: center; letter-spacing: 5px;">${otp}</h1>
+          <p>This code will expire in 10 minutes.</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error('Resend API Error:', error);
+    } else {
+      console.log(`Email successfully sent to ${email}. Response ID: ${data.id}`);
+    }
+  } catch (error) {
+    console.error('Failed to send email:', error);
+  }
 };
 
 const startEmailWorker = async () => {
