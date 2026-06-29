@@ -44,14 +44,12 @@ router.post('/register', async (req, res) => {
         .json({ message: `A user with that ${field} already exists` });
     }
 
-    // Create user (password hashed by pre-save hook)
-    const user = await User.create({ username, email, password });
-
     // Generate 6-digit OTP
-    const otp = crypto.randomInt(100000, 999999).toString();
+    const otp = crypto.randomInt(100000, 1000000).toString();
 
-    // Store OTP in Redis with 10 minutes expiration
+    // Store OTP and Temporary User Details in Redis with 10 minutes expiration
     await redisClient.setEx(`otp:${email}`, 600, otp);
+    await redisClient.setEx(`temp_user:${email}`, 600, JSON.stringify({ username, email, password }));
 
     const eventPayload = { type: 'USER_REGISTERED', email, otp };
 
@@ -68,8 +66,8 @@ router.post('/register', async (req, res) => {
     }
 
     res.status(201).json({
-      message: 'Registration successful. Please check your email for the OTP to verify your account.',
-      email: user.email,
+      message: 'Registration pending. Please check your email for the OTP to verify your account.',
+      email: email,
     });
   } catch (error) {
     console.error('Register error:', error.message);
@@ -133,8 +131,9 @@ router.post('/verify-email', async (req, res) => {
     }
 
     const storedOtp = await redisClient.get(`otp:${email}`);
+    const storedUserStr = await redisClient.get(`temp_user:${email}`);
 
-    if (!storedOtp) {
+    if (!storedOtp || !storedUserStr) {
       return res.status(400).json({ message: 'OTP has expired or is invalid' });
     }
 
@@ -142,18 +141,20 @@ router.post('/verify-email', async (req, res) => {
       return res.status(400).json({ message: 'Incorrect OTP' });
     }
 
-    const user = await User.findOneAndUpdate(
-      { email },
-      { isVerified: true },
-      { new: true }
-    );
+    const tempUser = JSON.parse(storedUserStr);
 
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
+    // Create the permanent user in MongoDB now that they are verified
+    // The password will automatically be hashed by the Mongoose pre-save hook
+    const user = await User.create({
+      username: tempUser.username,
+      email: tempUser.email,
+      password: tempUser.password,
+      isVerified: true
+    });
 
-    // Clear OTP from Redis
+    // Clear temporary data from Redis
     await redisClient.del(`otp:${email}`);
+    await redisClient.del(`temp_user:${email}`);
 
     res.json({
       message: 'Email verified successfully',

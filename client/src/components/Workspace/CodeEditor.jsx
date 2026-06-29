@@ -47,7 +47,7 @@ export default function CodeEditor({ roomCode, socket, language: initialLang }) 
 
     socket.on('code:sync', (data) => {
       isRemoteUpdate.current = true;
-      if (data.files && data.files.length > 0) {
+      if (data.files) {
         setFiles(data.files);
         const firstFile = data.files.find(f => f.type === 'file');
         if (firstFile) {

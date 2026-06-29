@@ -101,6 +101,10 @@ export default function Whiteboard({ roomCode, socket }) {
   // Socket listeners
   useEffect(() => {
     if (!socket) return;
+    
+    // Fetch existing strokes when joining
+    socket.emit('wb:sync', { roomCode });
+    
     const handleDraw = (data) => drawLine(data.x0, data.y0, data.x1, data.y1, data.color, data.width, data.tool);
     const handleSync = (data) => {
       if (data.strokes && ctxRef.current) {
