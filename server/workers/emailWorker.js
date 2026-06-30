@@ -1,35 +1,44 @@
-const { Resend } = require('resend');
 const { consumer } = require('../config/kafka');
 const { redisClient } = require('../config/redis');
-
-// Initialize Resend with the API key from environment variables
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmailLogic = async (email, otp) => {
   console.log(`Sending OTP to ${email}`);
   
   try {
-    const { data, error } = await resend.emails.send({
-      from: 'CoCode Collaborative IDE <onboarding@resend.dev>', // Resend provides a free testing domain. Once you add your own domain, change this.
-      to: email,
-      subject: 'Verify your email - CoCode',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>Welcome to CoCode!</h2>
-          <p>Please use the following 6-digit OTP to verify your email address:</p>
-          <h1 style="background: #f4f4f4; padding: 10px; text-align: center; letter-spacing: 5px;">${otp}</h1>
-          <p>This code will expire in 10 minutes.</p>
-        </div>
-      `,
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': process.env.BREVO_API_KEY,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        sender: { 
+          name: 'CoCode Collaborative IDE',
+          email: process.env.BREVO_SENDER_EMAIL // E.g., your verified Gmail address
+        },
+        to: [{ email: email }],
+        subject: 'Verify your email - CoCode',
+        htmlContent: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Welcome to CoCode!</h2>
+            <p>Please use the following 6-digit OTP to verify your email address:</p>
+            <h1 style="background: #f4f4f4; padding: 10px; text-align: center; letter-spacing: 5px;">${otp}</h1>
+            <p>This code will expire in 10 minutes.</p>
+          </div>
+        `
+      })
     });
 
-    if (error) {
-      console.error('Resend API Error:', error);
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Brevo API Error:', data);
     } else {
-      console.log(`Email successfully sent to ${email}. Response ID: ${data.id}`);
+      console.log(`Email successfully sent to ${email}. Message ID: ${data.messageId}`);
     }
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('Failed to send email via Brevo:', error);
   }
 };
 
