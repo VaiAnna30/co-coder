@@ -1,8 +1,15 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { useWebRTC } from '../../hooks/useWebRTC';
-import { Video, Mic, MicOff, Camera, CameraOff, X } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useWebRTC } from "../../hooks/useWebRTC";
+import { Video, Mic, MicOff, Camera, CameraOff, X } from "lucide-react";
 
-export default function VideoPanel({ roomCode, socket, user, participants, collapsed, onToggle }) {
+export default function VideoPanel({
+  roomCode,
+  socket,
+  user,
+  participants,
+  collapsed,
+  onToggle,
+}) {
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const localVideoRef = useRef(null);
@@ -14,58 +21,65 @@ export default function VideoPanel({ roomCode, socket, user, participants, colla
     const el = dragRef.current;
     const handle = handleRef.current;
     if (!el || !handle) return;
-    
+
     let isDragging = false;
     let startX, startY, initialLeft, initialTop;
-    
+
     const onMouseDown = (e) => {
       // Don't drag if clicking buttons
-      if (e.target.closest('button')) return;
-      
+      if (e.target.closest("button")) return;
+
       isDragging = true;
       startX = e.clientX;
       startY = e.clientY;
       const rect = el.getBoundingClientRect();
       initialLeft = rect.left;
       initialTop = rect.top;
-      
-      el.style.right = 'auto';
-      el.style.bottom = 'auto';
-      el.style.left = initialLeft + 'px';
-      el.style.top = initialTop + 'px';
-      el.style.transition = 'none';
-      
-      document.body.style.userSelect = 'none';
+
+      el.style.right = "auto";
+      el.style.bottom = "auto";
+      el.style.left = initialLeft + "px";
+      el.style.top = initialTop + "px";
+      el.style.transition = "none";
+
+      document.body.style.userSelect = "none";
     };
-    
+
     const onMouseMove = (e) => {
       if (!isDragging) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      el.style.left = initialLeft + dx + 'px';
-      el.style.top = initialTop + dy + 'px';
+      el.style.left = initialLeft + dx + "px";
+      el.style.top = initialTop + dy + "px";
     };
-    
+
     const onMouseUp = () => {
       if (isDragging) {
         isDragging = false;
-        document.body.style.userSelect = '';
-        el.style.transition = '';
+        document.body.style.userSelect = "";
+        el.style.transition = "";
       }
     };
-    
-    handle.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-    
+
+    handle.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+
     return () => {
-      handle.removeEventListener('mousedown', onMouseDown);
-      document.removeEventListener('mousemove', onMouseMove);
-      document.removeEventListener('mouseup', onMouseUp);
+      handle.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
     };
   }, []);
 
-  const { localStream, remoteStreams, toggleMic, toggleCam, startMedia, stopMedia } = useWebRTC({
+  const {
+    localStream,
+    remoteStreams,
+    toggleMic,
+    toggleCam,
+    startMedia,
+    stopMedia,
+  } = useWebRTC({
     roomCode,
     socket,
     user,
@@ -97,14 +111,28 @@ export default function VideoPanel({ roomCode, socket, user, participants, colla
     setCamOn((prev) => !prev);
   }, [toggleCam]);
 
-  const initial = user?.username ? user.username.charAt(0).toUpperCase() : '?';
+  const initial = user?.username ? user.username.charAt(0).toUpperCase() : "?";
 
   return (
-    <div ref={dragRef} className={`video-panel ${collapsed ? 'collapsed' : ''}`}>
+    <div
+      ref={dragRef}
+      className={`video-panel ${collapsed ? "collapsed" : ""}`}
+    >
       {!collapsed && (
         <>
-          <div ref={handleRef} className="video-panel-header" style={{ cursor: 'grab' }}>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+          <div
+            ref={handleRef}
+            className="video-panel-header"
+            style={{ cursor: "grab" }}
+          >
+            <h3
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                margin: 0,
+              }}
+            >
               <Video size={18} /> Video
             </h3>
             <button
@@ -124,8 +152,13 @@ export default function VideoPanel({ roomCode, socket, user, participants, colla
               ) : (
                 <div className="no-video-placeholder">
                   <div className="avatar-lg">{initial}</div>
-                  <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)' }}>
-                    {camOn ? 'Loading...' : 'Camera off'}
+                  <span
+                    style={{
+                      fontSize: "var(--fs-xs)",
+                      color: "var(--text-muted)",
+                    }}
+                  >
+                    {camOn ? "Loading..." : "Camera off"}
                   </span>
                 </div>
               )}
@@ -135,27 +168,25 @@ export default function VideoPanel({ roomCode, socket, user, participants, colla
             {/* Remote videos */}
             {Array.from(remoteStreams.entries()).map(([peerId, stream]) => {
               const participant = participants.find(
-                (p) => (p._id || p.id) === peerId
+                (p) => (p._id || p.id) === peerId,
               );
-              const name = participant?.username || participant?.name || 'Peer';
-              return (
-                <RemoteVideo key={peerId} stream={stream} name={name} />
-              );
+              const name = participant?.username || participant?.name || "Peer";
+              return <RemoteVideo key={peerId} stream={stream} name={name} />;
             })}
           </div>
 
           <div className="video-controls">
             <button
-              className={`btn btn-secondary btn-icon ${!micOn ? 'active' : ''}`}
+              className={`btn btn-secondary btn-icon ${!micOn ? "active" : ""}`}
               onClick={handleToggleMic}
-              title={micOn ? 'Mute mic' : 'Unmute mic'}
+              title={micOn ? "Mute mic" : "Unmute mic"}
             >
               {micOn ? <Mic size={18} /> : <MicOff size={18} />}
             </button>
             <button
-              className={`btn btn-secondary btn-icon ${!camOn ? 'active' : ''}`}
+              className={`btn btn-secondary btn-icon ${!camOn ? "active" : ""}`}
               onClick={handleToggleCam}
-              title={camOn ? 'Turn off camera' : 'Turn on camera'}
+              title={camOn ? "Turn off camera" : "Turn on camera"}
             >
               {camOn ? <Camera size={18} /> : <CameraOff size={18} />}
             </button>
@@ -172,7 +203,7 @@ function RemoteVideo({ stream, name }) {
   useEffect(() => {
     if (videoRef.current && stream) {
       videoRef.current.srcObject = stream;
-      
+
       // Explicitly call play to ensure audio/video starts even under strict autoplay policies
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
@@ -183,7 +214,7 @@ function RemoteVideo({ stream, name }) {
     }
   }, [stream, name]);
 
-  const initial = name ? name.charAt(0).toUpperCase() : '?';
+  const initial = name ? name.charAt(0).toUpperCase() : "?";
 
   return (
     <div className="video-tile">

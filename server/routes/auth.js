@@ -1,12 +1,14 @@
-const express = require('express');
-// JWT is used for generating and verifying JSON Web Tokens for authentication. It allows us to create signed tokens that clients can use to authenticate their requests to protected routes.
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+// This file handles signup, login, otp verification, profile retrieval
+// Instead of saving unverified user directly into your main database and slowing down requests by sending emails synchronously, we use Redis to temporarily store unverified user data and OTPs. Also uses Kafka or Redis fallback to act as a background communication channel for sending emails asynchronously, so that the main request can return quickly without waiting for email delivery.
+const express = require("express");
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 // This Protect middleware is used to secure routes by verifying the JWT token sent in the Authorization header of requests. It ensures that only authenticated users can access certain endpoints and attaches the user information to the request object for use in route handlers.
-const { protect } = require('../middleware/auth');
-const crypto = require('crypto');
-const { redisClient } = require('../config/redis');
-const { producer } = require('../config/kafka');
+const { protect } = require("../middleware/auth");
+const crypto = require("crypto");
+const speakeasy = require("speakeasy");
+const qrcode = require("qrcode");
+const { redisClient } = require("../config/redis");
 
 const router = express.Router();
 
@@ -14,13 +16,13 @@ const router = express.Router();
 // This function take user ID as input and generate the token based on the secret key and return the signed JWT token as the output that will expire in 7 days. The token can then be sent to the client to be used for authenticating future requests to protected routes.
 const generateToken = (userId) => {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
-    expiresIn: '7d',
+    expiresIn: "7d",
   });
 };
 
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
 // Register a new user. Returns user info + JWT.
-router.post('/register', async (req, res) => {
+router.post("/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -28,7 +30,7 @@ router.post('/register', async (req, res) => {
     if (!username || !email || !password) {
       return res
         .status(400)
-        .json({ message: 'Please provide username, email, and password' });
+        .json({ message: "Please provide username, email, and password" });
     }
 
     // Check for existing user by email or username
@@ -37,66 +39,63 @@ router.post('/register', async (req, res) => {
     });
 
     if (existingUser) {
-      const field =
-        existingUser.email === email ? 'email' : 'username';
+      const field = existingUser.email === email ? "email" : "username";
       return res
         .status(400)
-        .json({ message: `A user with that ${field} already exists` });
+        .json({ message: `A user with the provided ${field} already exists` });
     }
 
-    // Generate 6-digit OTP
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    // Generate TOTP Secret
+    const secret = speakeasy.generateSecret({
+      name: `CoCode (${email})`,
+    });
 
-    // Store OTP and Temporary User Details in Redis with 10 minutes expiration
-    await redisClient.setEx(`otp:${email}`, 600, otp);
-    await redisClient.setEx(`temp_user:${email}`, 600, JSON.stringify({ username, email, password }));
+    // Generate QR Code data URL
+    const qrCodeDataUrl = await qrcode.toDataURL(secret.otpauth_url);
 
-    const eventPayload = { type: 'USER_REGISTERED', email, otp };
-
-    if (process.env.KAFKA_BROKERS && producer) {
-      // Publish event to Kafka
-      await producer.send({
-        topic: 'auth-events',
-        messages: [{ key: email, value: JSON.stringify(eventPayload) }],
-      });
-    } else {
-      // Fallback to Redis Pub/Sub
-      const { redisClient } = require('../config/redis');
-      await redisClient.publish('auth-events', JSON.stringify(eventPayload));
-    }
+    // Store TOTP Secret and Temporary User Details in Redis with 10 minutes expiration
+    await redisClient.setEx(`totp_secret:${email}`, 600, secret.base32);
+    await redisClient.setEx(
+      `temp_user:${email}`,
+      600,
+      JSON.stringify({ username, email, password }),
+    );
 
     res.status(201).json({
-      message: 'Registration pending. Please check your email for the OTP to verify your account.',
+      message: "Scan the QR code with your Authenticator App.",
       email: email,
+      qrCode: qrCodeDataUrl,
     });
   } catch (error) {
-    console.error('Register error:', error.message);
-    res.status(500).json({ message: 'Server error during registration' });
+    console.error("Register error:", error.message);
+    res.status(500).json({ message: "Server error during registration" });
   }
 });
 
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
 // Authenticate user with email + password. Returns user info + JWT.
 
-router.post('/login', async (req, res) => {
+router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
       return res
         .status(400)
-        .json({ message: 'Please provide email and password' });
+        .json({ message: "Please provide email and password" });
     }
 
     // Find user by email (include password for comparison)
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     if (!user.isVerified) {
-      return res.status(401).json({ message: 'Please verify your email before logging in.' });
+      return res
+        .status(401)
+        .json({ message: "Please verify your email before logging in." });
     }
 
     // Compare plaintext password to stored hash
@@ -104,7 +103,7 @@ router.post('/login', async (req, res) => {
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     res.json({
@@ -116,29 +115,38 @@ router.post('/login', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Login error:', error.message);
-    res.status(500).json({ message: 'Server error during login' });
+    console.error("Login error:", error.message);
+    res.status(500).json({ message: "Server error during login" });
   }
 });
 
 // ─── POST /api/auth/verify-email ──────────────────────────────────────────────
-router.post('/verify-email', async (req, res) => {
+router.post("/verify-email", async (req, res) => {
   try {
     const { email, otp } = req.body;
 
     if (!email || !otp) {
-      return res.status(400).json({ message: 'Please provide email and otp' });
+      return res.status(400).json({ message: "Please provide email and otp" });
     }
 
-    const storedOtp = await redisClient.get(`otp:${email}`);
+    const storedSecret = await redisClient.get(`totp_secret:${email}`);
     const storedUserStr = await redisClient.get(`temp_user:${email}`);
 
-    if (!storedOtp || !storedUserStr) {
-      return res.status(400).json({ message: 'OTP has expired or is invalid' });
+    if (!storedSecret || !storedUserStr) {
+      return res
+        .status(400)
+        .json({ message: "Session expired, please register again" });
     }
 
-    if (storedOtp !== otp) {
-      return res.status(400).json({ message: 'Incorrect OTP' });
+    const verified = speakeasy.totp.verify({
+      secret: storedSecret,
+      encoding: "base32",
+      token: otp,
+      window: 1, // allow a 30-second leniency
+    });
+
+    if (!verified) {
+      return res.status(400).json({ message: "Incorrect or expired code" });
     }
 
     const tempUser = JSON.parse(storedUserStr);
@@ -149,15 +157,15 @@ router.post('/verify-email', async (req, res) => {
       username: tempUser.username,
       email: tempUser.email,
       password: tempUser.password,
-      isVerified: true
+      isVerified: true,
     });
 
     // Clear temporary data from Redis
-    await redisClient.del(`otp:${email}`);
+    await redisClient.del(`totp_secret:${email}`);
     await redisClient.del(`temp_user:${email}`);
 
     res.json({
-      message: 'Email verified successfully',
+      message: "Email verified successfully",
       token: generateToken(user._id),
       user: {
         _id: user._id,
@@ -166,15 +174,15 @@ router.post('/verify-email', async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Verify email error:', error.message);
-    res.status(500).json({ message: 'Server error during verification' });
+    console.error("Verify email error:", error.message);
+    res.status(500).json({ message: "Server error during verification" });
   }
 });
 
 // ─── GET /api/auth/me ─────────────────────────────────────────────────────────
 // Return the currently authenticated user's profile.
 // This route is protected by the protect middleware, which verifies the JWT token sent in the Authorization header of the request. If the token is valid, the middleware attaches the decoded user information to req.user. The route handler then returns the user's profile information (excluding the password) in the response. This allows clients to fetch the current user's profile data after they have logged in and obtained a token.
-router.get('/me', protect, async (req, res) => {
+router.get("/me", protect, async (req, res) => {
   try {
     res.json({
       user: {
@@ -184,8 +192,8 @@ router.get('/me', protect, async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Get me error:', error.message);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Get me error:", error.message);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

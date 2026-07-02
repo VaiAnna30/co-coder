@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { io } from 'socket.io-client';
-import { useAuth } from './AuthContext';
+import { createContext, useContext, useEffect, useState, useRef } from "react";
+import { io } from "socket.io-client";
+import { useAuth } from "./AuthContext";
 
 const SocketContext = createContext(null);
 
@@ -22,27 +22,27 @@ export function SocketProvider({ children }) {
       return;
     }
 
-    const token = localStorage.getItem('cocode_token');
+    const token = localStorage.getItem("cocode_token");
     if (!token) return;
 
-    const newSocket = io('/', {
+    const newSocket = io("/", {
       auth: { token },
-      transports: ['websocket', 'polling'],
+      transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
     });
 
-    newSocket.on('connect', () => {
+    newSocket.on("connect", () => {
       setConnected(true);
     });
 
-    newSocket.on('disconnect', () => {
+    newSocket.on("disconnect", () => {
       setConnected(false);
     });
 
-    newSocket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message);
+    newSocket.on("connect_error", (err) => {
+      console.error("Socket connection error:", err.message);
     });
 
     socketRef.current = newSocket;
@@ -65,6 +65,6 @@ export function SocketProvider({ children }) {
 
 export function useSocket() {
   const ctx = useContext(SocketContext);
-  if (!ctx) throw new Error('useSocket must be used within SocketProvider');
+  if (!ctx) throw new Error("useSocket must be used within SocketProvider");
   return ctx;
 }

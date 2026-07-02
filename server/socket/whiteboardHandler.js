@@ -1,4 +1,4 @@
-const Room = require('../models/Room');
+const Room = require("../models/Room");
 
 /**
  * Whiteboard collaboration handler
@@ -23,16 +23,18 @@ module.exports = (io, socket) => {
       };
 
       // Broadcast to others
-      socket.to(roomCode).emit('wb:update', fullStroke);
+      socket.to(roomCode).emit("wb:update", fullStroke);
 
       // Persist stroke to database
       await Room.findOneAndUpdate(
         { roomCode },
-        { $push: { whiteboardData: fullStroke } }
+        { $push: { whiteboardData: fullStroke } },
       );
     } catch (error) {
-      console.error('wb:draw error:', error.message);
-      socket.emit('error:message', { message: 'Failed to save whiteboard stroke' });
+      console.error("wb:draw error:", error.message);
+      socket.emit("error:message", {
+        message: "Failed to save whiteboard stroke",
+      });
     }
   };
 
@@ -43,14 +45,14 @@ module.exports = (io, socket) => {
    */
   const handleSync = async ({ roomCode }) => {
     try {
-      const room = await Room.findOne({ roomCode }).select('whiteboardData');
+      const room = await Room.findOne({ roomCode }).select("whiteboardData");
 
       if (room) {
-        socket.emit('wb:sync', { strokes: room.whiteboardData });
+        socket.emit("wb:sync", { strokes: room.whiteboardData });
       }
     } catch (error) {
-      console.error('wb:sync error:', error.message);
-      socket.emit('error:message', { message: 'Failed to sync whiteboard' });
+      console.error("wb:sync error:", error.message);
+      socket.emit("error:message", { message: "Failed to sync whiteboard" });
     }
   };
 
@@ -62,21 +64,18 @@ module.exports = (io, socket) => {
   const handleClear = async ({ roomCode }) => {
     try {
       // Broadcast clear to everyone in the room (including sender)
-      io.in(roomCode).emit('wb:clear');
+      io.in(roomCode).emit("wb:clear");
 
       // Remove all strokes from DB
-      await Room.findOneAndUpdate(
-        { roomCode },
-        { whiteboardData: [] }
-      );
+      await Room.findOneAndUpdate({ roomCode }, { whiteboardData: [] });
     } catch (error) {
-      console.error('wb:clear error:', error.message);
-      socket.emit('error:message', { message: 'Failed to clear whiteboard' });
+      console.error("wb:clear error:", error.message);
+      socket.emit("error:message", { message: "Failed to clear whiteboard" });
     }
   };
 
   // Register event listeners
-  socket.on('wb:draw', handleDraw);
-  socket.on('wb:sync', handleSync);
-  socket.on('wb:clear', handleClear);
+  socket.on("wb:draw", handleDraw);
+  socket.on("wb:sync", handleSync);
+  socket.on("wb:clear", handleClear);
 };

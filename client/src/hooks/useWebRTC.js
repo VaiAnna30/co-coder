@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import SimplePeer from '@thaunknown/simple-peer';
+import { useState, useRef, useCallback, useEffect } from "react";
+import SimplePeer from "@thaunknown/simple-peer";
 
 export function useWebRTC({ roomCode, socket, user }) {
   const [localStream, setLocalStream] = useState(null);
@@ -24,10 +24,10 @@ export function useWebRTC({ roomCode, socket, user }) {
 
       // Notify server we're ready for video
       if (socket) {
-        socket.emit('video:join', { roomCode });
+        socket.emit("video:join", { roomCode });
       }
     } catch (err) {
-      console.warn('Could not access media devices:', err.message);
+      console.warn("Could not access media devices:", err.message);
       // Try audio only
       try {
         const audioStream = await navigator.mediaDevices.getUserMedia({
@@ -39,10 +39,10 @@ export function useWebRTC({ roomCode, socket, user }) {
           setLocalStream(audioStream);
         }
         if (socket) {
-          socket.emit('video:join', { roomCode });
+          socket.emit("video:join", { roomCode });
         }
       } catch (audioErr) {
-        console.warn('Could not access any media devices:', audioErr.message);
+        console.warn("Could not access any media devices:", audioErr.message);
       }
     }
   }, [socket, roomCode]);
@@ -64,7 +64,7 @@ export function useWebRTC({ roomCode, socket, user }) {
     setRemoteStreams(new Map());
 
     if (socket) {
-      socket.emit('video:leave', { roomCode });
+      socket.emit("video:leave", { roomCode });
     }
   }, [socket, roomCode]);
 
@@ -81,22 +81,22 @@ export function useWebRTC({ roomCode, socket, user }) {
         stream: localStreamRef.current || undefined,
         config: {
           iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
           ],
         },
       });
 
-      peer.on('signal', (signal) => {
+      peer.on("signal", (signal) => {
         if (!socket) return;
         if (initiator) {
-          socket.emit('video:offer', { roomCode, peerId, signal });
+          socket.emit("video:offer", { roomCode, peerId, signal });
         } else {
-          socket.emit('video:answer', { roomCode, peerId, signal });
+          socket.emit("video:answer", { roomCode, peerId, signal });
         }
       });
 
-      peer.on('stream', (remoteStream) => {
+      peer.on("stream", (remoteStream) => {
         if (mountedRef.current) {
           setRemoteStreams((prev) => {
             const next = new Map(prev);
@@ -106,7 +106,7 @@ export function useWebRTC({ roomCode, socket, user }) {
         }
       });
 
-      peer.on('close', () => {
+      peer.on("close", () => {
         peersRef.current.delete(peerId);
         if (mountedRef.current) {
           setRemoteStreams((prev) => {
@@ -117,7 +117,7 @@ export function useWebRTC({ roomCode, socket, user }) {
         }
       });
 
-      peer.on('error', (err) => {
+      peer.on("error", (err) => {
         console.warn(`Peer ${peerId} error:`, err.message);
         peersRef.current.delete(peerId);
       });
@@ -125,7 +125,7 @@ export function useWebRTC({ roomCode, socket, user }) {
       peersRef.current.set(peerId, peer);
       return peer;
     },
-    [socket, roomCode]
+    [socket, roomCode],
   );
 
   // Socket event handlers
@@ -139,7 +139,11 @@ export function useWebRTC({ roomCode, socket, user }) {
     };
 
     const handleOffer = ({ targetPeerId, peerId, signal }) => {
-      if (String(targetPeerId) !== String(user?._id) && String(targetPeerId) !== String(user?.id)) return;
+      if (
+        String(targetPeerId) !== String(user?._id) &&
+        String(targetPeerId) !== String(user?.id)
+      )
+        return;
       let peer = peersRef.current.get(peerId);
       if (!peer) {
         peer = createPeer(peerId, false);
@@ -148,7 +152,11 @@ export function useWebRTC({ roomCode, socket, user }) {
     };
 
     const handleAnswer = ({ targetPeerId, peerId, signal }) => {
-      if (String(targetPeerId) !== String(user?._id) && String(targetPeerId) !== String(user?.id)) return;
+      if (
+        String(targetPeerId) !== String(user?._id) &&
+        String(targetPeerId) !== String(user?.id)
+      )
+        return;
       const peer = peersRef.current.get(peerId);
       if (peer) {
         peer.signal(signal);
@@ -156,7 +164,11 @@ export function useWebRTC({ roomCode, socket, user }) {
     };
 
     const handleIceCandidate = ({ targetPeerId, peerId, signal }) => {
-      if (String(targetPeerId) !== String(user?._id) && String(targetPeerId) !== String(user?.id)) return;
+      if (
+        String(targetPeerId) !== String(user?._id) &&
+        String(targetPeerId) !== String(user?.id)
+      )
+        return;
       const peer = peersRef.current.get(peerId);
       if (peer) {
         peer.signal(signal);
@@ -176,18 +188,18 @@ export function useWebRTC({ roomCode, socket, user }) {
       });
     };
 
-    socket.on('video:join', handleVideoJoin);
-    socket.on('video:offer', handleOffer);
-    socket.on('video:answer', handleAnswer);
-    socket.on('video:ice-candidate', handleIceCandidate);
-    socket.on('video:leave', handleVideoLeave);
+    socket.on("video:join", handleVideoJoin);
+    socket.on("video:offer", handleOffer);
+    socket.on("video:answer", handleAnswer);
+    socket.on("video:ice-candidate", handleIceCandidate);
+    socket.on("video:leave", handleVideoLeave);
 
     return () => {
-      socket.off('video:join', handleVideoJoin);
-      socket.off('video:offer', handleOffer);
-      socket.off('video:answer', handleAnswer);
-      socket.off('video:ice-candidate', handleIceCandidate);
-      socket.off('video:leave', handleVideoLeave);
+      socket.off("video:join", handleVideoJoin);
+      socket.off("video:offer", handleOffer);
+      socket.off("video:answer", handleAnswer);
+      socket.off("video:ice-candidate", handleIceCandidate);
+      socket.off("video:leave", handleVideoLeave);
     };
   }, [socket, user, createPeer]);
 

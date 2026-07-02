@@ -1,13 +1,11 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-/**
- * Chat message sub-schema — embedded in Room.chatHistory
- */
+// Defines that ever chat message needs sender, message and timestamp.
 const chatMessageSchema = new mongoose.Schema(
   {
     sender: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     senderName: {
@@ -23,39 +21,35 @@ const chatMessageSchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  { _id: true }
+  { _id: true },
 );
 
-/**
- * Whiteboard stroke sub-schema — embedded in Room.whiteboardData
- */
+// Drawing of the white board need user, tool, color, width and coordinates of the stroke.
 const strokeSchema = new mongoose.Schema(
   {
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-    tool: { type: String, default: 'pen' },
-    color: { type: String, default: '#000000' },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    tool: { type: String, default: "pen" },
+    color: { type: String, default: "#000000" },
     width: { type: Number, default: 2 },
     x0: { type: Number },
     y0: { type: Number },
     x1: { type: Number },
     y1: { type: Number },
   },
-  { _id: false }
+  { _id: false },
 );
 
-/**
- * File Schema — embedded in Room.files
- */
+// It has Id, name, type(file or folder) parentId, language(CPP, JS, etc..) and content.
 const fileSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
     name: { type: String, required: true },
-    type: { type: String, enum: ['file', 'folder'], default: 'file' },
+    type: { type: String, enum: ["file", "folder"], default: "file" },
     parentId: { type: String, default: null }, // null means root
-    language: { type: String, default: 'javascript' },
-    content: { type: String, default: '' },
+    language: { type: String, default: "cpp" },
+    content: { type: String, default: "" },
   },
-  { _id: false }
+  { _id: false },
 );
 
 /**
@@ -82,43 +76,43 @@ const roomSchema = new mongoose.Schema(
     },
     name: {
       type: String,
-      required: [true, 'Room name is required'],
+      required: [true, "Room name is required"],
       trim: true,
-      maxlength: [50, 'Room name must be at most 50 characters'],
+      maxlength: [50, "Room name must be at most 50 characters"],
     },
     admin: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
     participants: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: "User",
       },
     ],
     pendingApprovals: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
+        ref: "User",
       },
     ],
     code: {
       type: String,
-      default: '// Start coding together!\n',
+      default: "// Start coding together!\n",
     },
     language: {
       type: String,
-      default: 'javascript',
+      default: "cpp",
     },
     files: {
       type: [fileSchema],
       default: [
         {
-          id: '1',
-          name: 'main.js',
-          language: 'javascript',
-          content: '// Start coding collaboratively!\n',
+          id: "1",
+          name: "first.cpp",
+          language: "cpp",
+          content: "// Start coding collaboratively!\n",
         },
       ],
     },
@@ -135,24 +129,17 @@ const roomSchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-/**
- * Validate max 5 participants before saving.
- */
-roomSchema.pre('save', function (next) {
+// validations for max 5 Users in a room.
+roomSchema.pre("save", function (next) {
   if (this.participants.length > 5) {
-    const err = new Error('Room cannot have more than 5 participants');
+    const err = new Error("Room cannot have more than 5 participants");
     err.statusCode = 400;
     return next(err);
-  }
-  
-  // Migration for legacy rooms
-  if (this.isModified('code') && this.files.length > 0) {
-    // legacy support handled in handlers
   }
   next();
 });
 
-module.exports = mongoose.model('Room', roomSchema);
+module.exports = mongoose.model("Room", roomSchema);

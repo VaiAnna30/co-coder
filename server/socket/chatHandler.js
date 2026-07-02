@@ -1,4 +1,4 @@
-const Room = require('../models/Room');
+const Room = require("../models/Room");
 
 /**
  * Chat handler
@@ -24,16 +24,16 @@ module.exports = (io, socket) => {
       };
 
       // Broadcast to ALL sockets in the room (including sender for confirmation)
-      io.in(roomCode).emit('chat:receive', chatMessage);
+      io.in(roomCode).emit("chat:receive", chatMessage);
 
       // Persist to database
       await Room.findOneAndUpdate(
         { roomCode },
-        { $push: { chatHistory: chatMessage } }
+        { $push: { chatHistory: chatMessage } },
       );
     } catch (error) {
-      console.error('chat:send error:', error.message);
-      socket.emit('error:message', { message: 'Failed to send chat message' });
+      console.error("chat:send error:", error.message);
+      socket.emit("error:message", { message: "Failed to send chat message" });
     }
   };
 
@@ -44,18 +44,18 @@ module.exports = (io, socket) => {
    */
   const handleHistory = async ({ roomCode }) => {
     try {
-      const room = await Room.findOne({ roomCode }).select('chatHistory');
+      const room = await Room.findOne({ roomCode }).select("chatHistory");
 
       if (room) {
-        socket.emit('chat:history', { messages: room.chatHistory });
+        socket.emit("chat:history", { messages: room.chatHistory });
       }
     } catch (error) {
-      console.error('chat:history error:', error.message);
-      socket.emit('error:message', { message: 'Failed to load chat history' });
+      console.error("chat:history error:", error.message);
+      socket.emit("error:message", { message: "Failed to load chat history" });
     }
   };
 
   // Register event listeners
-  socket.on('chat:send', handleSend);
-  socket.on('chat:history', handleHistory);
+  socket.on("chat:send", handleSend);
+  socket.on("chat:history", handleHistory);
 };

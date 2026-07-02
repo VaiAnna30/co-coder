@@ -1,23 +1,24 @@
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 export default function AuthPage() {
-  const [tab, setTab] = useState('login');
-  const [email, setEmail] = useState('');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
-  const [error, setError] = useState('');
+  const [tab, setTab] = useState("login");
+  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [qrCode, setQrCode] = useState(null);
 
   const { login, register, verifyEmail, user } = useAuth();
   const navigate = useNavigate();
 
   // If already authenticated, redirect
   if (user) {
-    navigate('/dashboard', { replace: true });
+    navigate("/dashboard", { replace: true });
   }
 
   const showToast = useCallback((type, message) => {
@@ -27,37 +28,44 @@ export default function AuthPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
-    if (tab !== 'verify' && (!email || !password || (tab === 'register' && !username))) {
-      setError('Please fill in all fields');
+    if (
+      tab !== "verify" &&
+      (!email || !password || (tab === "register" && !username))
+    ) {
+      setError("Please fill in all fields");
       return;
     }
 
-    if (tab === 'verify' && !otp) {
-      setError('Please enter the OTP');
+    if (tab === "verify" && !otp) {
+      setError("Please enter the OTP");
       return;
     }
 
     setSubmitting(true);
     try {
-      if (tab === 'login') {
+      if (tab === "login") {
         await login(email, password);
-        showToast('success', 'Welcome back!');
-        navigate('/dashboard', { replace: true });
-      } else if (tab === 'register') {
+        showToast("success", "Welcome back!");
+        navigate("/dashboard", { replace: true });
+      } else if (tab === "register") {
         const res = await register(username, email, password);
-        showToast('success', res.message || 'OTP sent to your email!');
-        setTab('verify');
-      } else if (tab === 'verify') {
+        showToast("success", "Scan the QR code to proceed!");
+        if (res.qrCode) setQrCode(res.qrCode);
+        setTab("verify");
+      } else if (tab === "verify") {
         await verifyEmail(email, otp);
-        showToast('success', 'Email verified successfully!');
-        navigate('/dashboard', { replace: true });
+        showToast("success", "Email verified successfully!");
+        navigate("/dashboard", { replace: true });
       }
     } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.error || 'Something went wrong';
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Something went wrong";
       setError(msg);
-      showToast('error', msg);
+      showToast("error", msg);
     } finally {
       setSubmitting(false);
     }
@@ -65,11 +73,11 @@ export default function AuthPage() {
 
   const switchTab = (newTab) => {
     setTab(newTab);
-    setError('');
-    setEmail('');
-    setUsername('');
-    setPassword('');
-    setOtp('');
+    setError("");
+    setEmail("");
+    setUsername("");
+    setPassword("");
+    setOtp("");
   };
 
   return (
@@ -81,7 +89,11 @@ export default function AuthPage() {
         <div className="toast-container">
           <div className={`toast toast-${toast.type}`}>
             <span className="toast-icon">
-              {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ'}
+              {toast.type === "success"
+                ? "✓"
+                : toast.type === "error"
+                  ? "✕"
+                  : "ℹ"}
             </span>
             <span className="toast-message">{toast.message}</span>
             <button className="toast-close" onClick={() => setToast(null)}>
@@ -99,17 +111,17 @@ export default function AuthPage() {
 
         <div className="auth-card">
           <div className="auth-tabs">
-            {tab !== 'verify' ? (
+            {tab !== "verify" ? (
               <>
                 <button
-                  className={`auth-tab ${tab === 'login' ? 'active' : ''}`}
-                  onClick={() => switchTab('login')}
+                  className={`auth-tab ${tab === "login" ? "active" : ""}`}
+                  onClick={() => switchTab("login")}
                 >
                   Sign In
                 </button>
                 <button
-                  className={`auth-tab ${tab === 'register' ? 'active' : ''}`}
-                  onClick={() => switchTab('register')}
+                  className={`auth-tab ${tab === "register" ? "active" : ""}`}
+                  onClick={() => switchTab("register")}
                 >
                   Sign Up
                 </button>
@@ -120,16 +132,38 @@ export default function AuthPage() {
           </div>
 
           <form className="auth-form" onSubmit={handleSubmit}>
-            {tab === 'verify' ? (
+            {tab === "verify" ? (
               <>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: 'var(--fs-sm)' }}>
-                  We've sent a 6-digit code to <strong>{email}</strong>.
-                </p>
+                <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+                  {qrCode && (
+                    <img
+                      src={qrCode}
+                      alt="Authenticator QR Code"
+                      style={{
+                        margin: "0 auto",
+                        display: "block",
+                        borderRadius: "8px",
+                        border: "2px solid var(--border-color)",
+                        marginBottom: "1rem",
+                      }}
+                    />
+                  )}
+                  <p
+                    style={{
+                      color: "var(--text-secondary)",
+                      fontSize: "var(--fs-sm)",
+                    }}
+                  >
+                    Scan this QR code with <strong>Google Authenticator</strong>{" "}
+                    or <strong>Authy</strong>, then enter the 6-digit code
+                    below.
+                  </p>
+                </div>
                 <div className="input-group">
-                  <label>OTP Code</label>
+                  <label>Authenticator Code</label>
                   <input
                     type="text"
-                    className={`input ${error && !otp ? 'input-error' : ''}`}
+                    className={`input ${error && !otp ? "input-error" : ""}`}
                     placeholder="123456"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
@@ -140,12 +174,12 @@ export default function AuthPage() {
               </>
             ) : (
               <>
-                {tab === 'register' && (
+                {tab === "register" && (
                   <div className="input-group">
                     <label>Username</label>
                     <input
                       type="text"
-                      className={`input ${error && !username ? 'input-error' : ''}`}
+                      className={`input ${error && !username ? "input-error" : ""}`}
                       placeholder="Choose a username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
@@ -158,7 +192,7 @@ export default function AuthPage() {
                   <label>Email</label>
                   <input
                     type="email"
-                    className={`input ${error && !email ? 'input-error' : ''}`}
+                    className={`input ${error && !email ? "input-error" : ""}`}
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -170,31 +204,41 @@ export default function AuthPage() {
                   <label>Password</label>
                   <input
                     type="password"
-                    className={`input ${error && !password ? 'input-error' : ''}`}
+                    className={`input ${error && !password ? "input-error" : ""}`}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
+                    autoComplete={
+                      tab === "login" ? "current-password" : "new-password"
+                    }
                   />
                 </div>
               </>
             )}
 
             {error && (
-              <p style={{ color: 'var(--accent-red)', fontSize: 'var(--fs-sm)' }}>{error}</p>
+              <p
+                style={{ color: "var(--accent-red)", fontSize: "var(--fs-sm)" }}
+              >
+                {error}
+              </p>
             )}
 
-            <button type="submit" className="btn btn-primary btn-lg" disabled={submitting}>
+            <button
+              type="submit"
+              className="btn btn-primary btn-lg"
+              disabled={submitting}
+            >
               {submitting ? (
                 <>
                   <span className="spinner spinner-sm" /> Please wait…
                 </>
-              ) : tab === 'login' ? (
-                'Sign In'
-              ) : tab === 'verify' ? (
-                'Verify & Continue'
+              ) : tab === "login" ? (
+                "Sign In"
+              ) : tab === "verify" ? (
+                "Verify & Continue"
               ) : (
-                'Create Account'
+                "Create Account"
               )}
             </button>
           </form>

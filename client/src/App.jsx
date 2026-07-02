@@ -1,10 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
-import { SocketProvider } from './context/SocketContext';
-import ProtectedRoute from './components/Layout/ProtectedRoute';
-import AuthPage from './pages/AuthPage';
-import DashboardPage from './pages/DashboardPage';
-import WorkspacePage from './pages/WorkspacePage';
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import { SocketProvider } from "./context/SocketContext";
+import ProtectedRoute from "./components/Layout/ProtectedRoute";
+import AuthPage from "./pages/AuthPage";
+import DashboardPage from "./pages/DashboardPage";
+import WorkspacePage from "./pages/WorkspacePage";
 
 export default function App() {
   return (

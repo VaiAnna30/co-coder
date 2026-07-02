@@ -1,42 +1,58 @@
-import { PenTool, Highlighter, Eraser, Trash2, Square, Circle, Minus } from 'lucide-react';
+import {
+  PenTool,
+  Highlighter,
+  Eraser,
+  Trash2,
+  Square,
+  Circle,
+  Minus,
+} from "lucide-react";
 
-export default function Toolbar({ tool, setTool, color, setColor, strokeWidth, setStrokeWidth, onClear }) {
+export default function Toolbar({
+  tool,
+  setTool,
+  color,
+  setColor,
+  strokeWidth,
+  setStrokeWidth,
+  onClear,
+}) {
   return (
     <div className="wb-toolbar">
       <button
-        className={`tool-btn ${tool === 'pen' ? 'active' : ''}`}
-        onClick={() => setTool('pen')}
+        className={`tool-btn ${tool === "pen" ? "active" : ""}`}
+        onClick={() => setTool("pen")}
         title="Pen"
       >
         <PenTool size={18} />
       </button>
       <button
-        className={`tool-btn ${tool === 'highlighter' ? 'active' : ''}`}
-        onClick={() => setTool('highlighter')}
+        className={`tool-btn ${tool === "highlighter" ? "active" : ""}`}
+        onClick={() => setTool("highlighter")}
         title="Highlighter"
       >
         <Highlighter size={18} />
       </button>
-      
+
       <div className="toolbar-divider" />
-      
+
       <button
-        className={`tool-btn ${tool === 'rect' ? 'active' : ''}`}
-        onClick={() => setTool('rect')}
+        className={`tool-btn ${tool === "rect" ? "active" : ""}`}
+        onClick={() => setTool("rect")}
         title="Rectangle"
       >
         <Square size={18} />
       </button>
       <button
-        className={`tool-btn ${tool === 'circle' ? 'active' : ''}`}
-        onClick={() => setTool('circle')}
+        className={`tool-btn ${tool === "circle" ? "active" : ""}`}
+        onClick={() => setTool("circle")}
         title="Circle"
       >
         <Circle size={18} />
       </button>
       <button
-        className={`tool-btn ${tool === 'line' ? 'active' : ''}`}
-        onClick={() => setTool('line')}
+        className={`tool-btn ${tool === "line" ? "active" : ""}`}
+        onClick={() => setTool("line")}
         title="Line"
       >
         <Minus size={18} />
@@ -45,8 +61,8 @@ export default function Toolbar({ tool, setTool, color, setColor, strokeWidth, s
       <div className="toolbar-divider" />
 
       <button
-        className={`tool-btn ${tool === 'eraser' ? 'active' : ''}`}
-        onClick={() => setTool('eraser')}
+        className={`tool-btn ${tool === "eraser" ? "active" : ""}`}
+        onClick={() => setTool("eraser")}
         title="Eraser"
       >
         <Eraser size={18} />
@@ -73,7 +89,13 @@ export default function Toolbar({ tool, setTool, color, setColor, strokeWidth, s
         onChange={(e) => setStrokeWidth(Number(e.target.value))}
         title={`Stroke: ${strokeWidth}px`}
       />
-      <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-muted)', minWidth: '24px' }}>
+      <span
+        style={{
+          fontSize: "var(--fs-xs)",
+          color: "var(--text-muted)",
+          minWidth: "24px",
+        }}
+      >
         {strokeWidth}px
       </span>
 
