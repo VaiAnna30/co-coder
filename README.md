@@ -33,9 +33,9 @@ The backend is a **Node.js / Express.js** web service designed for scale.
 
 *   **Real-time Engine (`socket.io`)**: The core of the collaborative experience. It acts as the central router for broadcasting events and as the signaling server for WebRTC.
 *   **Database (`MongoDB` / `Mongoose`)**: Stores User credentials and Room data (including the deeply nested file system structures).
-*   **Event Streaming & Caching (`Kafka` & `Redis`)**: Redis is utilized for high-speed PUB/SUB across scaled server instances, and Kafka serves as a robust message broker ensuring reliable event delivery and message durability.
-*   **Authentication (`jsonwebtoken`, `bcrypt`)**: Secures routes and ensures only authorized users can join rooms or execute code.
-*   **Containerization (`Docker`)**: A pre-configured `docker-compose` environment seamlessly boots up Redis, Kafka, and Zookeeper for instant local development.
+*   **High-Speed Caching (`Redis`)**: Redis acts as an extremely fast, self-cleaning cache for unverified user accounts and TOTP secrets during the signup flow, keeping the main MongoDB pristine.
+*   **Authentication (`jsonwebtoken`, `bcrypt`, `speakeasy`)**: Secures routes, manages passwords, and provides mathematically secure Authenticator App (TOTP) verification during signup.
+*   **Containerization (`Docker`)**: A pre-configured `docker-compose` environment seamlessly boots up Redis for instant local development.
 
 ---
 
@@ -58,13 +58,12 @@ The video conferencing does **not** stream video data through the Node.js server
 3.  **ICE Candidates**: Both browsers ping public STUN servers to discover their own public IP addresses, and exchange these ICE candidates via Socket.io.
 4.  **P2P Connection**: Once candidates are exchanged, the Socket.io server steps out of the way. Video and audio packets flow directly between Browser A and Browser B via UDP, drastically reducing server bandwidth and latency.
 
-### 3. Remote Code Execution (Piston API)
-Running arbitrary user code on a Node.js server is a massive security vulnerability (Remote Code Execution attack). 
-To solve this, the application offloads code execution to the **Piston API**. When a user clicks "Run":
-1. The active file's code and language are packaged into a JSON payload.
-2. The Node server proxies this request to Piston.
-3. Piston spins up a secure, ephemeral **Docker Container** configured specifically for that language.
-4. The code is compiled and executed inside the sandbox, and the `stdout`/`stderr` streams are returned to the user's terminal safely.
+### 3. Local Code Execution (Synchronous Spawning)
+Code execution has been vastly simplified for performance and ease of deployment. When a user clicks "Run":
+1. The active file's code and language are packaged into a JSON payload and sent to the `/execute` REST endpoint.
+2. The Node server uses `child_process.spawn` to securely write the code to an ephemeral temporary directory.
+3. The code is executed locally in real-time, without requiring heavy background message queues.
+4. The execution's `stdout` and `stderr` streams, along with the execution time, are captured and synchronously returned to the user's terminal.
 
 ### 4. Database Schema Design
 The MongoDB database is optimized for quick room retrieval. The `Room` schema contains a nested `files` array:
@@ -100,7 +99,7 @@ Building an IDE for mobile devices required strict layout control:
 ## 🛠 Local Setup & Installation
 
 1. **Start Infrastructure Services**: 
-   Ensure Docker is installed and running, then spin up Redis and Kafka:
+   Ensure Docker is installed and running, then spin up Redis:
    ```bash
    docker-compose up -d
    ```
